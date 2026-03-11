@@ -1,0 +1,65 @@
+name: Labeler
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  size-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Apply PR size label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            const sizeLabels = ["size: XS", "size: S", "size: M", "size: L", "size: XL"];
+            const labelColor = "b76e79";
+
+            for (const label of sizeLabels) {
+              try {
+                await github.rest.issues.getLabel({ ...context.repo, name: label });
+              } catch (e) {
+                if (e.status === 404) {
+                  await github.rest.issues.createLabel({ ...context.repo, name: label, color: labelColor });
+                }
+              }
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const lockfiles = new Set(["pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lockb"]);
+            const total = files.reduce((sum, f) => {
+              if (f.filename.startsWith("docs/") || f.filename.endsWith(".md") || lockfiles.has(f.filename)) return sum;
+              return sum + (f.additions || 0) + (f.deletions || 0);
+            }, 0);
+
+            let target = "size: XL";
+            if (total < 50) target = "size: XS";
+            else if (total < 200) target = "size: S";
+            else if (total < 500) target = "size: M";
+            else if (total < 1000) target = "size: L";
+
+            const current = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              ...context.repo, issue_number: pr.number, per_page: 100,
+            });
+
+            for (const label of current) {
+              if (sizeLabels.includes(label.name) && label.name !== target) {
+                await github.rest.issues.removeLabel({ ...context.repo, issue_number: pr.number, name: label.name }).catch(() => {});
+              }
+            }
+
+            await github.rest.issues.addLabels({ ...context.repo, issue_number: pr.number, labels: [target] });

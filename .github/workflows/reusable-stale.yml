@@ -1,0 +1,50 @@
+name: Stale
+
+on:
+  workflow_call:
+    inputs:
+      days-before-issue-stale:
+        type: number
+        default: 14
+      days-before-issue-close:
+        type: number
+        default: 7
+      days-before-pr-stale:
+        type: number
+        default: 14
+      days-before-pr-close:
+        type: number
+        default: 7
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-issue-stale: ${{ inputs.days-before-issue-stale }}
+          days-before-issue-close: ${{ inputs.days-before-issue-close }}
+          days-before-pr-stale: ${{ inputs.days-before-pr-stale }}
+          days-before-pr-close: ${{ inputs.days-before-pr-close }}
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: pinned,no-stale,security
+          exempt-pr-labels: no-stale
+          exempt-all-assignees: true
+          remove-stale-when-updated: true
+          operations-per-run: 200
+          stale-issue-message: |
+            This issue has been automatically marked as stale due to inactivity.
+            Please update or it will be closed.
+          stale-pr-message: |
+            This PR has been automatically marked as stale due to inactivity.
+            Please update or it will be closed.
+          close-issue-message: |
+            Closed due to inactivity. Reopen if still relevant.
+          close-issue-reason: not_planned
+          close-pr-message: |
+            Closed due to inactivity. Reopen if still relevant.
