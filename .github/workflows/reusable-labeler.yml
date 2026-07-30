@@ -2,6 +2,17 @@ name: Labeler
 
 on:
   workflow_call:
+    inputs:
+      runs-on:
+        description: >-
+          JSON-encoded runner selector. Defaults to the self-hosted fleet.
+          PUBLIC repositories must pass '"ubuntu-latest"' — the org runner
+          group sets allows_public_repositories: false, so a public caller
+          targeting self-hosted queues forever and is silently auto-cancelled
+          by GitHub at 24h.
+        type: string
+        required: false
+        default: '["self-hosted","Linux","ttt"]'
 
 permissions:
   contents: read
@@ -9,7 +20,7 @@ permissions:
 
 jobs:
   size-label:
-    runs-on: [self-hosted, Linux, ttt]
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@v4
         with:
